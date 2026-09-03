@@ -1,25 +1,28 @@
+use futures_util::StreamExt;
+use tokio::io::AsyncWriteExt;
 use std::path::Path;
+use tokio_util::io::ReaderStream;
 use crate::file_info::FileInfo;
 
-const SERVER: &str = "http://localhost:3000";
-
-// The http layer should not take over the control flow
-// Display and filesystem work should be extracted
-// Implement streaming
+const SERVER: &str = "http://185.216.178.220:3000";
 
 pub async fn upload(path: &str) {
-    let data = std::fs::read(path)
-        .expect("failed to read file");
+    let path = Path::new(path);
 
-    let filename = Path::new(path)
+    let filename = path
         .file_name()
         .and_then(|name| name.to_str())
         .expect("failed to read filename");
 
+    let file = tokio::fs::File::open(path)
+        .await
+        .expect("failed to open file");
+    let stream = ReaderStream::new(file);
+
     let response = reqwest::Client::new()
         .post(format!("{SERVER}/files"))
         .header("x-file-name", filename)
-        .body(data)
+        .body(reqwest::Body::wrap_stream(stream))
         .send()
         .await
         .expect("failed to send request");
@@ -32,24 +35,8 @@ pub async fn upload(path: &str) {
         .text()
         .await
         .expect("failed to read response");
-    
-    println!("{id}");
-}
 
-pub async fn list() {
-    let response = reqwest::get(format!("{SERVER}/files"))
-        .await
-        .expect("failed to get a response");
-
-    if !response.status().is_success() {
-        panic!("server returned {}", response.status());
-    }
-
-    response.json::<Vec<FileInfo>>()
-        .await
-        .expect("failed to read response")
-        .iter()
-        .for_each(|file_info| println!("{:?}", file_info))
+    println!("{SERVER}/files/{id}");
 }
 
 pub async fn get(id: &str) {
@@ -69,15 +56,38 @@ pub async fn get(id: &str) {
         .expect("invalid filename header")
         .to_owned();
 
-    let data = response
-        .bytes()
+    let mut file = tokio::fs::File::create(&filename)
         .await
-        .expect("failed to read response");
+        .expect("failed to create file");
 
-    std::fs::write(&filename, data)
-        .expect("failed to write file");
+    let mut stream = response.bytes_stream();
 
-    println!("{filename}");
+    while let Some(chunk) = stream.next().await {
+        let chunk = chunk
+            .expect("failed to read response chunk");
+
+        file.write_all(&chunk)
+            .await
+            .expect("failed to write file");
+    }
+
+    println!("downloaded {filename}");
+}
+
+pub async fn list() {
+    let response = reqwest::get(format!("{SERVER}/files"))
+        .await
+        .expect("failed to get a response");
+
+    if !response.status().is_success() {
+        panic!("server returned {}", response.status());
+    }
+
+    response.json::<Vec<FileInfo>>()
+        .await
+        .expect("failed to read response")
+        .iter()
+        .for_each(|file_info| println!("{} | {}", file_info.id, file_info.name))
 }
 
 pub async fn remove(id: &str) {
@@ -91,5 +101,5 @@ pub async fn remove(id: &str) {
         panic!("server returned {}", response.status());
     }
 
-    println!("{id}");
+    println!("removed {id}");
 }
