@@ -36,7 +36,10 @@ pub async fn upload(path: &str) {
         .await
         .expect("failed to read response");
 
-    println!("{SERVER}/files/{id}");
+    println!(
+        "{}/files/{id}",
+        SERVER.strip_prefix("https://").unwrap_or(SERVER)
+    );
 }
 
 pub async fn get(id: &str) {
