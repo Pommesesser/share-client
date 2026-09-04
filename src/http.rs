@@ -4,7 +4,7 @@ use std::path::Path;
 use tokio_util::io::ReaderStream;
 use crate::file_info::FileInfo;
 
-const SERVER: &str = "http://185.216.178.220:3000";
+const SERVER: &str = "https://share-server.de";
 
 pub async fn upload(path: &str) {
     let path = Path::new(path);
