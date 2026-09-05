@@ -2,7 +2,7 @@ use futures_util::StreamExt;
 use tokio::io::AsyncWriteExt;
 use std::path::Path;
 use tokio_util::io::ReaderStream;
-use crate::file_info::FileInfo;
+use crate::file_entry::FileEntry;
 
 const SERVER: &str = "https://share-server.de";
 
@@ -86,11 +86,11 @@ pub async fn list() {
         panic!("server returned {}", response.status());
     }
 
-    response.json::<Vec<FileInfo>>()
+    response.json::<Vec<FileEntry>>()
         .await
         .expect("failed to read response")
         .iter()
-        .for_each(|file_info| println!("{} | {}", file_info.id, file_info.name))
+        .for_each(|file_entry| println!("{} | {} | {}", file_entry.id, file_entry.name, file_entry.size))
 }
 
 pub async fn remove(id: &str) {
@@ -104,5 +104,10 @@ pub async fn remove(id: &str) {
         panic!("server returned {}", response.status());
     }
 
-    println!("removed {id}");
+    let name = response
+        .text()
+        .await
+        .expect("failed to read response body");
+
+    println!("removed {name}");
 }

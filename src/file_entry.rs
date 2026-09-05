@@ -1,5 +1,6 @@
 #[derive(serde::Deserialize, Debug)]
-pub struct FileInfo {
+pub struct FileEntry {
     pub id: String,
     pub name: String,
+    pub size: i64
 }

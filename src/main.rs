@@ -1,5 +1,5 @@
 mod http;
-mod file_info;
+mod file_entry;
 
 use std::env;
 
