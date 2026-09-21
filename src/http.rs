@@ -4,6 +4,7 @@ use std::path::Path;
 use tokio_util::io::ReaderStream;
 use crate::file_entry::FileEntry;
 
+const API_KEY: &str = "8195c1a857379d140c170c8d0172cca2289e5761a9f0ed43de77033f944e2beb";
 const SERVER: &str = "https://share-server.de";
 
 pub async fn upload(path: &str) {
@@ -21,6 +22,7 @@ pub async fn upload(path: &str) {
 
     let response = reqwest::Client::new()
         .post(format!("{SERVER}/files"))
+        .bearer_auth(API_KEY)
         .header("x-file-name", filename)
         .body(reqwest::Body::wrap_stream(stream))
         .send()
@@ -43,7 +45,10 @@ pub async fn upload(path: &str) {
 }
 
 pub async fn get(id: &str) {
-    let response = reqwest::get(format!("{SERVER}/files/{id}"))
+    let response = reqwest::Client::new()
+        .get(format!("{SERVER}/files/{id}"))
+        .bearer_auth(API_KEY)
+        .send()
         .await
         .expect("failed to get a response");
 
@@ -78,7 +83,10 @@ pub async fn get(id: &str) {
 }
 
 pub async fn list() {
-    let response = reqwest::get(format!("{SERVER}/files"))
+    let response = reqwest::Client::new()
+        .get(format!("{SERVER}/files"))
+        .bearer_auth(API_KEY)
+        .send()
         .await
         .expect("failed to get a response");
 
@@ -96,6 +104,7 @@ pub async fn list() {
 pub async fn remove(id: &str) {
     let response = reqwest::Client::new()
         .delete(format!("{SERVER}/files/{id}"))
+        .bearer_auth(API_KEY)
         .send()
         .await
         .expect("failed to send request");
